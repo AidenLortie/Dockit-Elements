@@ -424,6 +424,34 @@ export class Element {
     }
 }
 
+// --- Component Base Class for Interactive Components ---
+interface ComponentState {
+    [key: string]: any;
+}
+
+export abstract class Component<S extends ComponentState = {}> extends Element {
+    state: S;
+
+    constructor(initialState: S, tagName: string = "div", props: DockitProps = {}) {
+        super([], props, tagName);
+        this.state = initialState;
+        // Do not call this.updateView() here; subclasses must call it after their own fields are initialized.
+    }
+
+    setState(partial: Partial<S>) {
+        this.state = {...this.state, ...partial};
+        this.updateView();
+        this.update();
+    }
+
+    // Subclasses must implement this to set this.children
+    abstract renderView(): void;
+
+    updateView() {
+        this.renderView();
+    }
+}
+
 // Content Sectioning
 export const address = (children: Array<Element | string> = [], props: DockitProps = {}) => new Element(children, props, "address");
 export const article = (children: Array<Element | string> = [], props: DockitProps = {}) => new Element(children, props, "article");
@@ -559,261 +587,3 @@ export const slot = (children: Array<Element | string> = [], props: DockitProps 
 export const template = (children: Array<Element | string> = [], props: DockitProps = {}) => new Element(children, props, "template");
 
 
-let count = 0;
-
-// --- Reactive Counter Component ---
-class Counter extends Element {
-    count: number;
-    constructor(initial = 0) {
-        super([], {}, "div");
-        this.count = initial;
-        this.updateView();
-    }
-    increment = () => {
-        console.log('Counter increment called, current count:', this.count);
-        this.count++;
-        this.updateView();
-        this.update();
-    };
-    updateView() {
-        this.children = [
-            h1(["🔥 Interactive Demo"], { key: "counter-title" }),
-            p(["Click the button to increase the counter:"], { key: "counter-desc" }),
-            button([
-                span([`Count: ${this.count}`], { key: "counter-span" })
-            ], {
-                id: "counter-btn",
-                key: "counter-btn",
-                events: { click: this.increment },
-                style: {
-                    default: {
-                        background: "#28a745",
-                        color: "#fff",
-                        border: "none",
-                        padding: "0.8rem 1.5rem",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        marginTop: "1rem",
-                    },
-                    pseudo: {
-                        ":hover": { background: "#1e7e34" },
-                    },
-                },
-            })
-        ];
-    }
-}
-
-// --- Single Counter instance for the demo ---
-const counter = new Counter(0);
-
-// --- Carousel Component ---
-class Carousel extends Element {
-    images: string[];
-    current: number;
-    constructor(images: string[]) {
-        super([], {}, "div");
-        this.images = images;
-        this.current = 0;
-        this.updateView();
-    }
-    next = () => {
-        this.current = (this.current + 1) % this.images.length;
-        this.updateView();
-        this.update();
-    };
-    prev = () => {
-        this.current = (this.current - 1 + this.images.length) % this.images.length;
-        this.updateView();
-        this.update();
-    };
-    updateView() {
-        this.children = [
-            img({
-                src: this.images[this.current],
-                style: {
-                    default: {
-                        width: "400px",
-                        height: "200px",
-                        objectFit: "cover",
-                        borderRadius: "8px",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                        marginBottom: "1rem"
-                    }
-                },
-                key: "carousel-img"
-            }),
-            div([
-                button(["Previous"], {
-                    events: { click: this.prev },
-                    style: {
-                        default: {
-                            marginRight: "1rem",
-                            padding: "0.5rem 1rem",
-                            borderRadius: "4px",
-                            border: "none",
-                            background: "#007bff",
-                            color: "#fff",
-                            cursor: "pointer"
-                        },
-                        pseudo: { ":hover": { background: "#0056b3" } }
-                    },
-                    key: "carousel-prev"
-                }),
-                button(["Next"], {
-                    events: { click: this.next },
-                    style: {
-                        default: {
-                            padding: "0.5rem 1rem",
-                            borderRadius: "4px",
-                            border: "none",
-                            background: "#007bff",
-                            color: "#fff",
-                            cursor: "pointer"
-                        },
-                        pseudo: { ":hover": { background: "#0056b3" } }
-                    },
-                    key: "carousel-next"
-                })
-            ], { style: { default: { marginBottom: "1rem" } }, key: "carousel-controls" }),
-            div([
-                span([`${this.current + 1} / ${this.images.length}`], { key: "carousel-indicator" })
-            ], { style: { default: { fontSize: "1rem", color: "#555" } }, key: "carousel-indicator-wrap" })
-        ];
-    }
-}
-
-// --- Single Carousel instance for the demo ---
-const carousel = new Carousel([
-    "https://placehold.co/400x200?text=Image+1",
-    "https://placehold.co/400x200?text=Image+2",
-    "https://placehold.co/400x200?text=Image+3"
-]);
-
-const LandingPage = () =>
-    div(
-        [
-            header([
-                h1(["Dockit - Lightweight UI Library"]), nav([
-                    a(["Home"], {href: "#", style: {default: {marginRight: "1rem"}}}),
-                    a(["Docs"], {href: "#", style: {default: {marginRight: "1rem"}}}),
-                    a(["GitHub"], {
-                        href: "github.com/aidenlortie/dockit-element",
-                        target: "_blank",
-                        style: {default: {marginRight: "1rem"}}
-                    }),
-                ], {style: {default: {marginTop: "1rem"}}}),
-            ], {style: {default: {textAlign: "center", padding: "2rem 1rem", background: "#f0f0f0"}}}),
-            // --- Carousel Section (replaces hero) ---
-            section([
-                h1(["Image Carousel"]),
-                carousel
-            ], {
-                style: {
-                    default: {
-                        textAlign: "center",
-                        padding: "4rem 1rem",
-                        background: "#e9f5ff",
-                    }
-                }
-            }),
-            // Features Section with slideUp animation
-            section(
-                [
-                    h1(["✨ Features"]),
-                    p(["Scoped styles, pseudo selectors, and media queries out-of-the-box!"]),
-                    div(
-                        [
-                            div([p(["⚡ Fast Rendering"]), p(["Updates only when needed."])]),
-                            div([p(["🎨 Scoped Styles"]), p(["No global CSS collisions."])]),
-                            div([p(["📱 Responsive"]), p(["Media queries supported."])]),
-                        ],
-                        {
-                            style: {
-                                default: {
-                                    display: "grid",
-                                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                                    gap: "1.5rem",
-                                    padding: "0 2rem",
-                                },
-                            },
-                        }
-                    ),
-                ],
-                {
-                    style: {
-                        default: {
-                            padding: "3rem 0",
-                            background: "#fff",
-                            textAlign: "center",
-                        },
-                        animation: {
-                            keyframes: {
-                                slideUp: {
-                                    "0%": {transform: "translateY(30px)", opacity: "0"},
-                                    "100%": {transform: "translateY(0)", opacity: "1"},
-                                },
-                            },
-                            options: {
-                                name: "slideUp",
-                                duration: 800,
-                                easing: "ease-out",
-                                fillMode: "forwards",
-                            },
-                        },
-                    },
-                }
-            ),
-
-            // --- Use the Counter component here ---
-            section([
-                counter
-            ], {
-                style: {
-                    default: {
-                        textAlign: "center",
-                        padding: "3rem 1rem",
-                        background: "#f8f9fa",
-                    },
-                },
-            }),
-        ],
-        {
-            style: {
-                default: {
-                    fontFamily: "sans-serif",
-                    lineHeight: "1.6",
-                    color: "#333",
-                },
-            },
-        }
-    );
-
-// --- Component Base Class for Interactive Components ---
-interface ComponentState {
-    [key: string]: any;
-}
-
-export abstract class Component<S extends ComponentState = {}> extends Element {
-    state: S;
-    constructor(initialState: S, tagName: string = "div", props: DockitProps = {}) {
-        super([], props, tagName);
-        this.state = initialState;
-        this.updateView();
-    }
-    setState(partial: Partial<S>) {
-        this.state = { ...this.state, ...partial };
-        this.updateView();
-        this.update();
-    }
-    // Subclasses must implement this to set this.children
-    abstract renderView(): void;
-    updateView() {
-        this.renderView();
-    }
-}
-
-// --- Mount to page ---
-const container = document.getElementById("app")!;
-const root = new DockitElementRoot(container, LandingPage());
-root.render();
