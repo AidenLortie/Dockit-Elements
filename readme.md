@@ -14,33 +14,33 @@ Dockit Element is a lightweight, zero-dependency UI library for building reactiv
 ## Table of Contents
 
 **Getting Started**
-1. [What is Dockit Element?](#what-is-dockit-element)
-2. [Installation](#installation)
-3. [Your First Element](#your-first-element)
-4. [Displaying Your App](#displaying-your-app)
-5. [Project Setup](#project-setup)
+- 1. [What is Dockit Element?](#what-is-dockit-element)
+- 2. [Installation](#installation)
+- 3. [Your First Element](#your-first-element)
+- 4. [Displaying Your App](#displaying-your-app)
+- 5. [Project Setup](#project-setup)
 
 **Building with Elements**
-6. [Creating Elements](#creating-elements)
-7. [Adding Styles](#adding-styles)
-8. [Handling User Events](#handling-user-events)
+- 6. [Creating Elements](#creating-elements)
+- 7. [Adding Styles](#adding-styles)
+- 8. [Handling User Events](#handling-user-events)
 
 **Working with Components**
-9. [Simple Components (Functions)](#simple-components-functions)
-10. [Interactive Components (Classes)](#interactive-components-classes)
-11. [Composing Components](#composing-components)
+- 9. [Simple Components (Functions)](#simple-components-functions)
+- 10. [Interactive Components (Classes)](#interactive-components-classes)
+- 11. [Composing Components](#composing-components)
 
 **Advanced Features**
-12. [How Reactivity Works](#how-reactivity-works)
-13. [Animations and Transitions](#animations-and-transitions)
-14. [Advanced Patterns](#advanced-patterns)
-15. [Testing Your Components](#testing-your-components)
-16. [Publishing as a Library](#publishing-as-a-library)
+- 12. [How Reactivity Works](#how-reactivity-works)
+- 13. [Animations and Transitions](#animations-and-transitions)
+- 14. [Advanced Patterns](#advanced-patterns)
+- 15. [Testing Your Components](#testing-your-components)
+- 16. [Publishing as a Library](#publishing-as-a-library)
 
 **Reference**
-17. [Troubleshooting & FAQ](#troubleshooting--faq)
-18. [Contributing](#contributing)
-19. [License](#license)
+- 17. [Troubleshooting & FAQ](#troubleshooting--faq)
+- 18. [Contributing](#contributing)
+- 19. [License](#license)
 
 ---
 
@@ -935,8 +935,7 @@ We welcome contributions!
 1. Fork the repository
 2. Create a feature branch: `git checkout -b my-feature`
 3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+4. Submit a pull request
 
 **What to contribute:**
 - Bug fixes
@@ -947,7 +946,6 @@ We welcome contributions!
 
 **Guidelines:**
 - Keep it simple and explicit (Dockit's philosophy)
-- Add tests for new features
 - Update documentation
 - Follow existing code style
 
