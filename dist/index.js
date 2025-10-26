@@ -58,23 +58,27 @@ export class DockitElementRoot {
     render() {
         this.container.innerHTML = ''; // Clear existing content
         const dom = this.root.render(); // Render first to register styles
-        this.injectStyles(); // Inject styles after registration, before DOM attach
+        DockitElementRoot.injectStyles(); // Inject styles after registration, before DOM attach
         this.container.appendChild(dom);
     }
     update() {
         if (!this.lastRoot || JSON.stringify(this.root) !== JSON.stringify(this.lastRoot)) {
             this.root.update();
+            DockitElementRoot.injectStyles(); // Ensure new styles are injected after updates
         }
     }
     destroy() {
-        // TODO
+        this.container.innerHTML = '';
+        this.lastRoot = undefined;
+        this.root = undefined;
+        this.container = undefined;
     }
     replace(newRoot) {
         this.lastRoot = this.root;
         this.root = newRoot;
         this.render();
     }
-    injectStyles() {
+    static injectStyles() {
         const dockitStyleElementId = 'dockit-styles';
         let styleElement = document.getElementById(dockitStyleElementId);
         if (!styleElement) {
@@ -223,62 +227,72 @@ export class Element {
             }
         }
         this._el = el; // cache the rendered element
+        DockitElementRoot.injectStyles(); // Ensure styles for any new classes are injected after render
         return el;
     }
     update() {
         if (!this._el) {
             this.render();
+            DockitElementRoot.injectStyles(); // Ensure styles after initial render
             return;
         }
         // Type guard: only proceed if _el is HTMLElement
         if (!(this._el instanceof HTMLElement)) {
             return;
         }
+        const el = this._el; // TypeScript: el is HTMLElement
         // Update props if they have changed
         if (JSON.stringify(this.props) !== JSON.stringify(this.lastProps)) {
             // Update id and className if changed
             if (this.props.id && this.props.id !== this.lastProps?.id) {
-                this._el.id = this.props.id;
+                el.id = this.props.id;
             }
             if (this.props.className && this.props.className !== this.lastProps?.className) {
-                this._el.className = this.props.className;
+                el.className = this.props.className;
             }
             // Update attributes and properties
             for (const [key, value] of Object.entries(this.props)) {
                 if (reservedPropKeys.has(key))
                     continue; // Skip reserved keys
-                if (key in this._el) {
+                if (key in el) {
                     // @ts-ignore
-                    this._el[key] = value;
+                    el[key] = value;
                 }
                 else {
-                    this._el.setAttribute(key, value);
+                    el.setAttribute(key, value);
                 }
             }
             // Handle styles
             if (this.props.style) {
+                // Remove any old Dockit-generated classes
+                const toRemove = [];
+                el.classList.forEach(cls => {
+                    if (cls.startsWith('dockit-'))
+                        toRemove.push(cls);
+                });
+                toRemove.forEach(cls => el.classList.remove(cls));
+                // Add the new class
                 const className = registerOrGetClassName(this.props.style);
-                if (!this._el.classList.contains(className)) {
-                    this._el.classList.add(className);
-                }
+                el.classList.add(className);
             }
             // Handle events
             if (this.props.events) {
                 // Remove old event listeners
                 if (this.lastProps?.events) {
                     for (const [event, handler] of Object.entries(this.lastProps.events)) {
-                        this._el.removeEventListener(event, handler);
+                        el.removeEventListener(event, handler);
                     }
                 }
                 // Add new event listeners
                 for (const [event, handler] of Object.entries(this.props.events)) {
-                    this._el.addEventListener(event, handler);
+                    el.addEventListener(event, handler);
                 }
             }
             this.lastProps = { ...this.props }; // Update lastProps
+            DockitElementRoot.injectStyles();
         }
         // --- Granular children diffing ---
-        const parent = this._el;
+        const parent = el;
         const oldChildren = this.lastChildren || [];
         const newChildren = this.children;
         let domIdx = 0;
@@ -322,6 +336,7 @@ export class Element {
                         const node = newChild.render();
                         parent.replaceChild(node, parent.childNodes[domIdx]);
                         newChild._el = node;
+                        DockitElementRoot.injectStyles(); // Ensure styles for new child
                     }
                 }
                 else {
@@ -329,6 +344,7 @@ export class Element {
                     parent.replaceChild(node, parent.childNodes[domIdx]);
                     if (typeof newChild !== 'string' && node instanceof HTMLElement)
                         newChild._el = node;
+                    DockitElementRoot.injectStyles(); // Ensure styles for new child
                 }
                 domIdx++;
             }
@@ -343,6 +359,7 @@ export class Element {
                 }
                 if (typeof newChild !== 'string' && node instanceof HTMLElement)
                     newChild._el = node;
+                DockitElementRoot.injectStyles(); // Ensure styles for inserted child
                 domIdx++;
             }
         }
@@ -351,6 +368,7 @@ export class Element {
             parent.removeChild(parent.lastChild);
         }
         this.lastChildren = [...this.children]; // Store references
+        DockitElementRoot.injectStyles(); // Final catch-all to ensure all styles are injected
     }
 }
 export class Component extends Element {

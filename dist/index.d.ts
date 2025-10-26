@@ -7,7 +7,7 @@ export declare class DockitElementRoot {
     update(): void;
     destroy(): void;
     replace(newRoot: Element): void;
-    injectStyles(): void;
+    static injectStyles(): void;
 }
 type DockitStyle = {
     default: {
