@@ -7,46 +7,114 @@ function hashString(str) {
     return (hash >>> 0).toString(36); // convert to base36 for shorter hash
 }
 const StyleRegistry = new Map(); // Maps styleHash -> className
-let globalCounter = 0; // Global counter for unique identifiers, should a value be required more than once, the
-// number should be saved and reused.
-const registerOrGetClassName = (style) => {
-    const toKebabCase = (str) => str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
-    // Normalize style keys → kebab-case
-    const convertStyleKeys = (obj) => {
-        const newObj = {};
-        for (const key in obj) {
-            if (obj.hasOwnProperty(key)) {
-                newObj[toKebabCase(key)] = obj[key];
-            }
-        }
-        return newObj;
+const injectedClassNames = new Set(); // Track injected class names
+const pendingStyles = new Map(); // Queue styles for batch injection
+let globalCounter = 0; // Global counter for unique identifiers
+const CLASS_PREFIX = 'dockit-'; // Constant for class name prefix
+const elementMetadata = new WeakMap();
+const toKebabCase = (str) => str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+// Normalize style keys → kebab-case and sort them for stable hashing
+const convertStyleKeys = (obj) => {
+    const newObj = {};
+    const sortedKeys = Object.keys(obj).sort();
+    for (const key of sortedKeys) {
+        newObj[toKebabCase(key)] = obj[key];
+    }
+    return newObj;
+};
+// Normalize the entire style object immutably with sorted keys
+const normalizeStyle = (style) => {
+    const normalized = {
+        default: convertStyleKeys(style.default)
     };
-    style.default = convertStyleKeys(style.default);
     if (style.pseudo) {
-        for (const pseudo in style.pseudo) {
-            if (style.pseudo.hasOwnProperty(pseudo)) {
-                style.pseudo[pseudo] = convertStyleKeys(style.pseudo[pseudo]);
-            }
+        normalized.pseudo = {};
+        const sortedPseudoKeys = Object.keys(style.pseudo).sort();
+        for (const pseudo of sortedPseudoKeys) {
+            normalized.pseudo[pseudo] = convertStyleKeys(style.pseudo[pseudo]);
         }
     }
     if (style.media) {
-        for (const media in style.media) {
-            if (style.media.hasOwnProperty(media)) {
-                style.media[media] = convertStyleKeys(style.media[media]);
+        normalized.media = {};
+        const sortedMediaKeys = Object.keys(style.media).sort();
+        for (const media of sortedMediaKeys) {
+            normalized.media[media] = convertStyleKeys(style.media[media]);
+        }
+    }
+    if (style.animation) {
+        normalized.animation = {
+            keyframes: {},
+            options: style.animation.options
+        };
+        const sortedKeyframeNames = Object.keys(style.animation.keyframes).sort();
+        for (const keyframeName of sortedKeyframeNames) {
+            normalized.animation.keyframes[keyframeName] = {};
+            const keyframe = style.animation.keyframes[keyframeName];
+            const sortedPercents = Object.keys(keyframe).sort();
+            for (const percent of sortedPercents) {
+                normalized.animation.keyframes[keyframeName][percent] = convertStyleKeys(keyframe[percent]);
             }
         }
     }
-    // Stable hash based on content
-    const styleString = JSON.stringify(style);
+    return normalized;
+};
+const registerOrGetClassName = (style) => {
+    // Normalize style immutably with sorted keys for stable hashing
+    const normalizedStyle = normalizeStyle(style);
+    // Stable hash based on sorted content
+    const styleString = JSON.stringify(normalizedStyle);
     const styleHash = hashString(styleString);
     // Always use a unique class name based on style hash
-    const className = `dockit-${styleHash}`;
+    const className = `${CLASS_PREFIX}${styleHash}`;
     if (!StyleRegistry.has(className)) {
         StyleRegistry.set(className, styleString);
+        // Queue the style for batch injection
+        pendingStyles.set(className, normalizedStyle);
     }
     return className;
 };
 const reservedPropKeys = new Set(['id', 'className', 'style', 'events']);
+// Targeted prop comparison instead of JSON.stringify
+const propsChanged = (newProps, oldProps, el) => {
+    if (!oldProps)
+        return true;
+    // Check id and className
+    if (newProps.id !== oldProps.id)
+        return true;
+    if (newProps.className !== oldProps.className)
+        return true;
+    // Check style (deep compare)
+    const newStyleStr = newProps.style ? JSON.stringify(normalizeStyle(newProps.style)) : undefined;
+    const oldStyleStr = oldProps.style ? JSON.stringify(normalizeStyle(oldProps.style)) : undefined;
+    if (newStyleStr !== oldStyleStr)
+        return true;
+    // Check events (compare function identity using metadata)
+    if (el) {
+        const meta = elementMetadata.get(el);
+        if (meta) {
+            const newEvents = newProps.events || {};
+            const oldEvents = oldProps.events || {};
+            const allEventKeys = new Set([...Object.keys(newEvents), ...Object.keys(oldEvents)]);
+            for (const eventKey of allEventKeys) {
+                if (newEvents[eventKey] !== oldEvents[eventKey]) {
+                    return true;
+                }
+            }
+        }
+    }
+    // Check other attribute keys and values
+    const newKeys = Object.keys(newProps).filter(k => !reservedPropKeys.has(k)).sort();
+    const oldKeys = Object.keys(oldProps).filter(k => !reservedPropKeys.has(k)).sort();
+    if (newKeys.length !== oldKeys.length)
+        return true;
+    if (newKeys.some((k, i) => k !== oldKeys[i]))
+        return true;
+    for (const key of newKeys) {
+        if (newProps[key] !== oldProps[key])
+            return true;
+    }
+    return false;
+};
 export class DockitElementRoot {
     container;
     root;
@@ -86,20 +154,28 @@ export class DockitElementRoot {
             styleElement.id = dockitStyleElementId;
             document.head.appendChild(styleElement);
         }
-        // Keep track of which classes we already injected
-        const injected = new Set(Array.from(styleElement.sheet?.cssRules ?? []).map(rule => rule.selectorText?.replace('.', '') ?? ''));
-        // Only add new styles
-        StyleRegistry.forEach((styleString, className) => {
-            if (injected.has(className))
-                return; // already exists
-            const styleObj = JSON.parse(styleString);
+        // Helper to safely insert a rule
+        const safeInsertRule = (rule) => {
+            try {
+                styleElement.sheet?.insertRule(rule, styleElement.sheet.cssRules.length);
+            }
+            catch (e) {
+                // Fallback for browsers that reject insertRule
+                styleElement.appendChild(document.createTextNode(rule));
+            }
+        };
+        // Only process pending styles that haven't been injected yet
+        pendingStyles.forEach((styleObj, className) => {
+            if (injectedClassNames.has(className)) {
+                return; // Already injected
+            }
             // Default styles
             let rule = `.${className} {`;
             for (const [key, value] of Object.entries(styleObj.default)) {
                 rule += `${key}: ${value};`;
             }
             rule += `}`;
-            styleElement.sheet?.insertRule(rule, styleElement.sheet.cssRules.length);
+            safeInsertRule(rule);
             // Pseudo selectors
             if (styleObj.pseudo) {
                 for (const [pseudo, pseudoStyles] of Object.entries(styleObj.pseudo)) {
@@ -108,7 +184,7 @@ export class DockitElementRoot {
                         pseudoRule += `${key}: ${value};`;
                     }
                     pseudoRule += `}`;
-                    styleElement.sheet?.insertRule(pseudoRule, styleElement.sheet.cssRules.length);
+                    safeInsertRule(pseudoRule);
                 }
             }
             // Media queries
@@ -119,15 +195,18 @@ export class DockitElementRoot {
                         mediaRule += `${key}: ${value};`;
                     }
                     mediaRule += `} }`;
-                    styleElement.sheet?.insertRule(mediaRule, styleElement.sheet.cssRules.length);
+                    safeInsertRule(mediaRule);
                 }
             }
-            // Animations
+            // Animations with namespacing
             if (styleObj.animation) {
                 const { keyframes, options } = styleObj.animation;
-                // Insert keyframes
+                // Extract hash from className (remove prefix)
+                const classHash = className.startsWith(CLASS_PREFIX) ? className.substring(CLASS_PREFIX.length) : className;
+                // Insert keyframes with namespaced names
                 for (const [keyframeName, keyframeStyles] of Object.entries(keyframes)) {
-                    let keyframeRule = `@keyframes ${keyframeName} {`;
+                    const namespacedName = `${CLASS_PREFIX}${classHash}-${keyframeName}`;
+                    let keyframeRule = `@keyframes ${namespacedName} {`;
                     for (const [percent, styles] of Object.entries(keyframeStyles)) {
                         keyframeRule += `${percent} {`;
                         for (const [key, value] of Object.entries(styles)) {
@@ -136,12 +215,14 @@ export class DockitElementRoot {
                         keyframeRule += `}`;
                     }
                     keyframeRule += `}`;
-                    styleElement.sheet?.insertRule(keyframeRule, styleElement.sheet.cssRules.length);
+                    safeInsertRule(keyframeRule);
                 }
-                // Animation options
+                // Animation options with namespaced keyframe names
                 const names = options.name
-                    ? (Array.isArray(options.name) ? options.name.join(", ") : options.name)
-                    : Object.keys(keyframes).join(", "); // fallback
+                    ? (Array.isArray(options.name)
+                        ? options.name.map(n => `${CLASS_PREFIX}${classHash}-${n}`).join(", ")
+                        : `${CLASS_PREFIX}${classHash}-${options.name}`)
+                    : Object.keys(keyframes).map(n => `${CLASS_PREFIX}${classHash}-${n}`).join(", ");
                 let animationRule = `.${className} { animation-name: ${names};`;
                 if (options.duration)
                     animationRule += ` animation-duration: ${options.duration}ms;`;
@@ -156,24 +237,28 @@ export class DockitElementRoot {
                 if (options.fillMode)
                     animationRule += ` animation-fill-mode: ${options.fillMode};`;
                 animationRule += ` }`;
-                styleElement.sheet?.insertRule(animationRule, styleElement.sheet.cssRules.length);
+                safeInsertRule(animationRule);
             }
+            // Mark as injected
+            injectedClassNames.add(className);
         });
+        // Clear pending styles after injection
+        pendingStyles.clear();
     }
 }
 export class Element {
     tagName;
     props;
     children;
-    lastProps;
-    lastChildren;
     _el; // cached rendered element
     constructor(children = [], props = {}, tagName) {
         this.tagName = tagName;
         this.props = props;
-        this.lastProps = props.lastProps;
         this.children = children;
-        this.lastChildren = children;
+        // Initialize metadata in WeakMap
+        elementMetadata.set(this, {
+            eventHandlersMap: new Map(),
+        });
         this.onLoad();
     }
     onLoad() {
@@ -187,11 +272,17 @@ export class Element {
     }
     render() {
         const el = document.createElement(this.tagName);
+        const meta = elementMetadata.get(this);
         // set id and className if provided
-        if (this.props.id)
+        if (this.props.id) {
             el.id = this.props.id;
-        else
-            this.props.id = `dockit-${globalCounter++}`; // Assign a unique id if not provided
+            meta.generatedId = this.props.id;
+        }
+        else {
+            const generatedId = `${CLASS_PREFIX}${globalCounter++}`;
+            meta.generatedId = generatedId;
+            this.props.id = generatedId;
+        }
         if (this.props.className)
             el.className = this.props.className;
         // Set attributes and properties
@@ -211,10 +302,13 @@ export class Element {
             const className = registerOrGetClassName(this.props.style);
             el.classList.add(className);
         }
-        // Handle events
+        // Handle events with wrapped handlers
         if (this.props.events) {
             for (const [event, handler] of Object.entries(this.props.events)) {
-                el.addEventListener(event, handler);
+                // Create a wrapper function that we can later remove
+                const wrapper = (e) => handler(e);
+                meta.eventHandlersMap.set(event, wrapper);
+                el.addEventListener(event, wrapper);
             }
         }
         // Handle children
@@ -227,6 +321,9 @@ export class Element {
             }
         }
         this._el = el; // cache the rendered element
+        // Store lastProps and lastChildren in metadata
+        meta.lastProps = { ...this.props };
+        meta.lastChildren = [...this.children];
         DockitElementRoot.injectStyles(); // Ensure styles for any new classes are injected after render
         return el;
     }
@@ -241,13 +338,21 @@ export class Element {
             return;
         }
         const el = this._el; // TypeScript: el is HTMLElement
-        // Update props if they have changed
-        if (JSON.stringify(this.props) !== JSON.stringify(this.lastProps)) {
+        let meta = elementMetadata.get(this);
+        // Ensure metadata exists (defensive programming)
+        if (!meta) {
+            meta = {
+                eventHandlersMap: new Map(),
+            };
+            elementMetadata.set(this, meta);
+        }
+        // Update props if they have changed using targeted comparison
+        if (propsChanged(this.props, meta.lastProps, this)) {
             // Update id and className if changed
-            if (this.props.id && this.props.id !== this.lastProps?.id) {
+            if (this.props.id && this.props.id !== meta.lastProps?.id) {
                 el.id = this.props.id;
             }
-            if (this.props.className && this.props.className !== this.lastProps?.className) {
+            if (this.props.className && this.props.className !== meta.lastProps?.className) {
                 el.className = this.props.className;
             }
             // Update attributes and properties
@@ -267,7 +372,7 @@ export class Element {
                 // Remove any old Dockit-generated classes
                 const toRemove = [];
                 el.classList.forEach(cls => {
-                    if (cls.startsWith('dockit-'))
+                    if (cls.startsWith(CLASS_PREFIX))
                         toRemove.push(cls);
                 });
                 toRemove.forEach(cls => el.classList.remove(cls));
@@ -275,60 +380,66 @@ export class Element {
                 const className = registerOrGetClassName(this.props.style);
                 el.classList.add(className);
             }
-            // Handle events
-            if (this.props.events) {
-                // Remove old event listeners
-                if (this.lastProps?.events) {
-                    for (const [event, handler] of Object.entries(this.lastProps.events)) {
-                        el.removeEventListener(event, handler);
-                    }
-                }
-                // Add new event listeners
-                for (const [event, handler] of Object.entries(this.props.events)) {
-                    el.addEventListener(event, handler);
+            // Handle events with proper removal using stored wrappers
+            const oldEvents = meta.lastProps?.events || {};
+            const newEvents = this.props.events || {};
+            // Remove old event listeners
+            for (const [event, _handler] of Object.entries(oldEvents)) {
+                const wrapper = meta.eventHandlersMap.get(event);
+                if (wrapper) {
+                    el.removeEventListener(event, wrapper);
+                    meta.eventHandlersMap.delete(event);
                 }
             }
-            this.lastProps = { ...this.props }; // Update lastProps
+            // Add new event listeners with wrappers
+            for (const [event, handler] of Object.entries(newEvents)) {
+                const wrapper = (e) => handler(e);
+                meta.eventHandlersMap.set(event, wrapper);
+                el.addEventListener(event, wrapper);
+            }
+            meta.lastProps = { ...this.props }; // Update lastProps in metadata
             DockitElementRoot.injectStyles();
         }
-        // --- Granular children diffing ---
+        // --- Improved children diffing ---
         const parent = el;
-        const oldChildren = this.lastChildren || [];
+        const oldChildren = meta.lastChildren || [];
         const newChildren = this.children;
+        // Build a map of old keyed children for O(1) lookups
+        const getKey = (child, idx) => (typeof child === 'object' && child?.props?.key != null) ? child.props.key : idx;
+        const oldKeyedMap = new Map();
+        for (let i = 0; i < oldChildren.length; i++) {
+            const key = getKey(oldChildren[i], i);
+            oldKeyedMap.set(key, { child: oldChildren[i], index: i });
+        }
         let domIdx = 0;
         for (let i = 0; i < newChildren.length; i++) {
             const newChild = newChildren[i];
-            const oldChild = oldChildren[i];
+            const key = getKey(newChild, i);
+            const oldMatch = oldKeyedMap.get(key);
             // Reference equality: if same instance, always update in place
-            if (newChild === oldChild) {
+            if (oldMatch && newChild === oldMatch.child) {
                 if (typeof newChild !== 'string' && newChild)
                     newChild.update();
                 domIdx++;
                 continue;
             }
-            // Fallback to key/index logic for non-equal children
-            const getKey = (child, idx) => (typeof child === 'object' && child?.props?.key != null) ? child.props.key : idx;
-            const key = getKey(newChild, i);
-            // Try to find a matching old child by key
-            let foundIdx = -1;
-            for (let j = 0; j < oldChildren.length; j++) {
-                if (getKey(oldChildren[j], j) === key) {
-                    foundIdx = j;
-                    break;
-                }
-            }
-            if (foundIdx !== -1) {
-                const oldMatch = oldChildren[foundIdx];
-                if (typeof newChild === 'string' && typeof oldMatch === 'string') {
-                    if (newChild !== oldMatch) {
-                        const textNode = document.createTextNode(newChild);
-                        parent.replaceChild(textNode, parent.childNodes[domIdx]);
-                        // No _el to update for text nodes
+            if (oldMatch) {
+                const oldChild = oldMatch.child;
+                if (typeof newChild === 'string' && typeof oldChild === 'string') {
+                    if (newChild !== oldChild) {
+                        // Mutate text node instead of replacing
+                        const node = parent.childNodes[domIdx];
+                        if (node && node.nodeType === Node.TEXT_NODE) {
+                            node.textContent = newChild;
+                        }
+                        else {
+                            parent.replaceChild(document.createTextNode(newChild), parent.childNodes[domIdx]);
+                        }
                     }
                 }
-                else if (typeof newChild !== 'string' && typeof oldMatch !== 'string') {
-                    if (newChild === oldMatch) {
-                        newChild._el = oldMatch._el;
+                else if (typeof newChild !== 'string' && typeof oldChild !== 'string') {
+                    if (newChild === oldChild) {
+                        newChild._el = oldChild._el;
                         newChild.update();
                     }
                     else {
@@ -367,7 +478,7 @@ export class Element {
         while (parent.childNodes.length > newChildren.length) {
             parent.removeChild(parent.lastChild);
         }
-        this.lastChildren = [...this.children]; // Store references
+        meta.lastChildren = [...this.children]; // Store references in metadata
         DockitElementRoot.injectStyles(); // Final catch-all to ensure all styles are injected
     }
 }
