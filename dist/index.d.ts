@@ -56,8 +56,6 @@ export declare class Element {
     tagName: string;
     props: DockitProps;
     children: Array<Element | string>;
-    lastProps?: DockitProps;
-    lastChildren?: Array<Element | string>;
     _el?: Text | HTMLElement;
     constructor(children: Array<Element | string> | undefined, props: DockitProps | undefined, tagName: string);
     onLoad(): this;
