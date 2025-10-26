@@ -889,14 +889,14 @@ class LoginForm extends Component<{ username: string; password: string }> {
           type: 'text',
           placeholder: 'Username',
           events: {
-            input: (e) => this.setState({ username: e.target.value })
+            input: (e) => this.setState({ username: (e.target as HTMLInputElement).value })
           }
         }),
         input([], {
           type: 'password',
           placeholder: 'Password',
           events: {
-            input: (e) => this.setState({ password: e.target.value })
+            input: (e) => this.setState({ password: (e.target as HTMLInputElement).value })
           }
         }),
         button(['Login'], { type: 'submit' })
