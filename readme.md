@@ -1,189 +1,400 @@
-# Dockit Element — In-Depth Tutorial & Reference
+# Dockit Element — Getting Started Guide
 
-Dockit Element is a lightweight, zero-dependency UI library for building reactive, component-based web interfaces in TypeScript or JavaScript. This guide will take you from first steps to advanced usage, with best practices, troubleshooting, and real-world patterns.
+Dockit Element is a lightweight, zero-dependency UI library for building reactive web interfaces in TypeScript or JavaScript.
+
+**Perfect for:**
+- Developers new to component-based UI development
+- Projects that need interactive widgets without heavy frameworks
+- Learning how modern UI libraries work under the hood
+
+**Philosophy:** Start simple, build up gradually. No magic, no hidden complexity—just clear, explicit code that you control.
 
 ---
 
 ## Table of Contents
-1. [Introduction](#introduction)
+
+**Getting Started**
+1. [What is Dockit Element?](#what-is-dockit-element)
 2. [Installation](#installation)
-3. [Project Structure & Setup](#project-structure--setup)
-4. [Hello World: Your First Dockit App](#hello-world-your-first-dockit-app)
-5. [Mounting Components: DockitElementRoot](#mounting-components-dockitelementroot)
-6. [Stateless vs Stateful Components](#stateless-vs-stateful-components)
-    - [Stateless Components](#stateless-components)
-    - [Stateful Components](#stateful-components)
-    - [Props and Children](#props-and-children)
-7. [Handling Events](#handling-events)
-8. [Styling: Scoped, Dynamic, and Responsive](#styling-scoped-dynamic-and-responsive)
-9. [Composing and Reusing Components](#composing-and-reusing-components)
-10. [State, Reactivity, and the Virtual DOM](#state-reactivity-and-the-virtual-dom)
-11. [Animations: Keyframes, Transitions, and State](#animations-keyframes-transitions-and-state)
-12. [Advanced Stateful Patterns: Custom Methods & Lifecycle](#advanced-stateful-patterns-custom-methods--lifecycle)
-13. [Testing Dockit Components](#testing-dockit-components)
-14. [Integrating Dockit as a Library](#integrating-dockit-as-a-library)
-15. [Advanced Topics](#advanced-topics)
-16. [Troubleshooting & FAQ](#troubleshooting--faq)
-17. [Contributing & Extending](#contributing--extending)
-18. [License](#license)
+3. [Your First Element](#your-first-element)
+4. [Displaying Your App](#displaying-your-app)
+5. [Project Setup](#project-setup)
+
+**Building with Elements**
+6. [Creating Elements](#creating-elements)
+7. [Adding Styles](#adding-styles)
+8. [Handling User Events](#handling-user-events)
+
+**Working with Components**
+9. [Simple Components (Functions)](#simple-components-functions)
+10. [Interactive Components (Classes)](#interactive-components-classes)
+11. [Composing Components](#composing-components)
+
+**Advanced Features**
+12. [How Reactivity Works](#how-reactivity-works)
+13. [Animations and Transitions](#animations-and-transitions)
+14. [Advanced Patterns](#advanced-patterns)
+15. [Testing Your Components](#testing-your-components)
+16. [Publishing as a Library](#publishing-as-a-library)
+
+**Reference**
+17. [Troubleshooting & FAQ](#troubleshooting--faq)
+18. [Contributing](#contributing)
+19. [License](#license)
 
 ---
 
-## Introduction
+## What is Dockit Element?
 
-Dockit Element is designed for developers who want a simple, fast, and flexible way to build UI components without the overhead of large frameworks. It is ideal for:
-- Embedding interactive widgets in any web project
-- Building small to medium SPAs
-- Learning about virtual DOM and component architectures
-- Creating libraries of reusable UI components
+Dockit Element helps you build web interfaces using **elements** and **components**.
 
-**Philosophy:** Dockit is minimal, explicit, and easy to understand. It gives you full control over your UI logic and styles, without magic or hidden state.
+- **Elements** are individual pieces of UI like buttons, divs, or paragraphs
+- **Components** are reusable collections of elements that can manage their own behavior
+- **Reactivity** means your UI automatically updates when data changes
+
+Think of it like building with LEGO blocks—start with simple pieces, then combine them into more complex structures.
 
 ---
 
 ## Installation
 
-### a) With npm (recommended)
+**Using npm (recommended):**
 ```sh
 npm install dockit-element
 ```
 
-### b) Manual Copy
+**Manual installation:**
 Copy `src/index.ts` into your project and import from there.
 
 ---
 
-## Project Structure & Setup
+## Your First Element
 
-A typical Dockit project might look like:
-```
-my-app/
-  src/
-    index.ts         # Your app entry point
-    components/      # Your Dockit components
-  public/
-    index.html       # Your HTML entry
-  package.json
-  tsconfig.json
+Let's create the simplest possible Dockit app—a single text element:
+
+```typescript
+import { div } from 'dockit-element';
+
+// Create a div element with text inside
+const myElement = div(["Hello, World!"]);
 ```
 
-**index.html:**
+That's it! You've created your first Dockit element. The `div()` function creates a virtual element that represents an HTML `<div>`.
+
+**Other elements:**
+Dockit provides functions for all standard HTML elements:
+```typescript
+import { h1, p, button, span } from 'dockit-element';
+
+const heading = h1(["Welcome!"]);
+const paragraph = p(["This is a paragraph."]);
+const btn = button(["Click me!"]);
+```
+
+---
+
+## Displaying Your App
+
+To show your elements in the browser, you need two things:
+
+**1. An HTML file with a container:**
 ```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dockit Element App</title>
+  <title>My Dockit App</title>
 </head>
 <body>
   <div id="app"></div>
-  <script src="dist/bundle.js"></script> <!-- or your compiled JS -->
+  <script src="dist/bundle.js"></script>
 </body>
 </html>
 ```
 
-**tsconfig.json:**
+**2. Mount your element to the container:**
+```typescript
+import { div, DockitElementRoot } from 'dockit-element';
+
+// Create an element
+const myElement = div(["Hello, Dockit!"]);
+
+// Find the container in your HTML
+const container = document.getElementById('app')!;
+
+// Create a root and render
+const root = new DockitElementRoot(container, myElement);
+root.render();
+```
+
+**What's happening here?**
+- `DockitElementRoot` is your app's entry point—it connects your Dockit elements to the actual browser DOM
+- `container` is where your app will appear on the page
+- `render()` displays your element in the browser
+
+**Updating your app:**
+- To replace the entire app: `root.replace(newElement)`
+- To re-render after changes: `root.update()`
+
+---
+
+## Project Setup
+
+A typical Dockit project structure:
+
+```
+my-app/
+  src/
+    index.ts         # Your app entry point
+    components/      # Your Dockit components (optional)
+  public/
+    index.html       # Your HTML file
+  package.json
+  tsconfig.json
+```
+
+**Minimal tsconfig.json:**
 ```json
 {
   "compilerOptions": {
     "target": "es6",
     "module": "esnext",
     "strict": true,
-    "outDir": "./dist",
-    "declaration": true,
-    "declarationDir": "./dist"
+    "outDir": "./dist"
   },
   "include": ["src/**/*"]
 }
 ```
 
----
-
-## Hello World: Your First Dockit App
-
-Dockit uses a virtual DOM and a simple API for creating elements. Here’s how to render a message:
-
-```typescript
-import { div, DockitElementRoot } from 'dockit-element';
-
-const root = new DockitElementRoot(
-  document.getElementById('app')!,
-  div(["Hello, Dockit!"])
-);
-root.render();
+**Build with:**
+```sh
+npm run build    # Compile TypeScript
 ```
 
-**Key Points:**
-- Always use `DockitElementRoot` to mount your app/component tree. This ensures proper style injection and updates.
-- The first argument is the DOM container, the second is your root Dockit element/component.
+You'll need a bundler (like esbuild, webpack, or vite) to create the `bundle.js` file referenced in your HTML.
 
 ---
 
-## Mounting Components: DockitElementRoot
+## Creating Elements
 
-`DockitElementRoot` is the entry point for rendering and updating your Dockit UI. It manages the root element, style injection, and updates.
+Elements can be nested and combined to create complex UIs:
 
-**Example:**
 ```typescript
-import { DockitElementRoot, div } from 'dockit-element';
+import { div, h1, p, button } from 'dockit-element';
 
-const appRoot = new DockitElementRoot(
-  document.getElementById('app')!,
-  div(["Welcome to Dockit!"])
-);
-appRoot.render();
+const myCard = div([
+  h1(["Welcome to Dockit"]),
+  p(["Build amazing UIs with ease."]),
+  button(["Get Started"])
+]);
 ```
 
-- To update the root, use `appRoot.replace(newRootElement)`.
-- To re-render (e.g., after state changes), use `appRoot.update()`.
+**Key concepts:**
+- Elements take an array of children as the first argument
+- Children can be strings (text) or other elements
+- You can nest elements as deeply as needed
+
+**Adding attributes:**
+```typescript
+import { div, input } from 'dockit-element';
+
+const myInput = input([], {
+  id: "username",
+  placeholder: "Enter your name",
+  type: "text"
+});
+
+const container = div([myInput], {
+  id: "input-container",
+  className: "form-group"
+});
+```
+
+The second argument to element functions is an options object where you can specify:
+- `id`: Element ID
+- `className`: CSS classes
+- `style`: Inline or scoped styles (more on this below)
+- `events`: Event handlers
+- Any other HTML attributes
 
 ---
 
-## Stateless vs Stateful Components
+## Adding Styles
 
-### Stateless Components
-Stateless components are just functions that return Dockit elements. Use them for simple, reusable UI pieces that don’t manage their own state.
+Dockit supports powerful scoped styling that's automatically managed for you.
+
+**Basic styling:**
+```typescript
+import { div } from 'dockit-element';
+
+const styledDiv = div(["Styled content"], {
+  style: {
+    default: {
+      color: 'blue',
+      padding: '20px',
+      backgroundColor: '#f0f0f0',
+      borderRadius: '8px'
+    }
+  }
+});
+```
+
+**Hover effects (pseudo-selectors):**
+```typescript
+const hoverDiv = div(["Hover over me!"], {
+  style: {
+    default: {
+      padding: '1rem',
+      backgroundColor: '#4e54c8',
+      color: 'white',
+      cursor: 'pointer'
+    },
+    pseudo: {
+      ':hover': {
+        backgroundColor: '#8f94fb',
+        transform: 'scale(1.05)'
+      }
+    }
+  }
+});
+```
+
+**Responsive styles (media queries):**
+```typescript
+const responsiveDiv = div(["I adapt to screen size"], {
+  style: {
+    default: {
+      fontSize: '24px',
+      padding: '2rem'
+    },
+    media: {
+      '(max-width: 600px)': {
+        fontSize: '16px',
+        padding: '1rem'
+      }
+    }
+  }
+});
+```
+
+**Why this is powerful:**
+- Styles are scoped to components (no global CSS conflicts)
+- Dockit automatically generates unique class names
+- Styles are injected into the document only when needed
+- Full TypeScript support with autocomplete
+
+---
+
+## Handling User Events
+
+Add interactivity with event handlers:
 
 ```typescript
-import { h1, p, div } from 'dockit-element';
+import { button } from 'dockit-element';
 
-function WelcomeMessage({ name }: { name: string }) {
+const clickableButton = button(["Click me!"], {
+  events: {
+    click: () => {
+      alert("Button clicked!");
+    }
+  }
+});
+```
+
+**Multiple events:**
+```typescript
+const input = input([], {
+  events: {
+    input: (e) => console.log("Value:", e.target.value),
+    focus: () => console.log("Input focused"),
+    blur: () => console.log("Input blurred")
+  }
+});
+```
+
+**Common events:** `click`, `input`, `change`, `submit`, `focus`, `blur`, `keydown`, `keyup`, `mouseenter`, `mouseleave`
+
+---
+
+## Simple Components (Functions)
+
+Components are reusable pieces of UI. The simplest form is a function that returns elements:
+
+```typescript
+import { div, h1, p } from 'dockit-element';
+
+function WelcomeCard({ name, message }: { name: string; message: string }) {
   return div([
     h1([`Welcome, ${name}!`]),
-    p(["This is your first Dockit component."])
-  ]);
+    p([message])
+  ], {
+    style: {
+      default: {
+        border: '1px solid #ccc',
+        padding: '1rem',
+        borderRadius: '8px'
+      }
+    }
+  });
 }
+
+// Use it:
+const card = WelcomeCard({
+  name: "Alice",
+  message: "Thanks for using Dockit!"
+});
 
 const root = new DockitElementRoot(
   document.getElementById('app')!,
-  WelcomeMessage({ name: "Developer" })
+  card
 );
 root.render();
 ```
 
-### Stateful Components
-Stateful components extend the `Component` base class. Use them for interactive UI that manages its own state.
+**When to use function components:**
+- Simple, presentational UI
+- Components that don't need their own state
+- Reusable UI patterns
+
+---
+
+## Interactive Components (Classes)
+
+For components that need to manage state and update themselves, use class-based components:
 
 ```typescript
-import { Component, h1, button, span, DockitElementRoot } from 'dockit-element';
+import { Component, div, h1, button, span, DockitElementRoot } from 'dockit-element';
 
 class Counter extends Component<{ count: number }> {
-  constructor(initial = 0) {
-    super({ count: initial });
-    this.updateView();
+  constructor(initialCount = 0) {
+    super({ count: initialCount });
+    this.updateView();  // Important: initialize the view
   }
+
   renderView() {
     this.children = [
-      h1(["Counter"]),
-      button([
-        span([`Count: ${this.state.count}`])
-      ], {
-        events: { click: () => this.setState({ count: this.state.count + 1 }) }
+      h1(["Counter App"]),
+      div([
+        span([`Current count: ${this.state.count}`])
+      ]),
+      button(["Increment"], {
+        events: {
+          click: () => {
+            // setState automatically updates the UI
+            this.setState({ count: this.state.count + 1 });
+          }
+        }
+      }),
+      button(["Reset"], {
+        events: {
+          click: () => this.setState({ count: 0 })
+        }
       })
     ];
   }
 }
 
+// Use it:
 const root = new DockitElementRoot(
   document.getElementById('app')!,
   new Counter(0)
@@ -191,342 +402,569 @@ const root = new DockitElementRoot(
 root.render();
 ```
 
-### Props and Children
-Props are passed as arguments to your component functions or constructors. Children are passed as arrays and can be spread into the element tree.
+**Key points:**
+1. Extend `Component<StateType>` where `StateType` is your state object shape
+2. Initialize state in `super(initialState)`
+3. Call `this.updateView()` at the end of the constructor
+4. Define your UI in `renderView()` method
+5. Update state with `this.setState()` - this triggers automatic re-rendering
 
-```typescript
-function Card({ title, children }: { title: string, children: any[] }) {
-  return div([
-    h1([title]),
-    ...children
-  ], { style: { default: { border: '1px solid #ccc', padding: '1rem', borderRadius: '8px' } } });
-}
-
-const card = Card({ title: "My Card", children: [div(["Card content here!"])] });
-const root = new DockitElementRoot(document.getElementById('app')!, card);
-root.render();
-```
+**When to use class components:**
+- Interactive UI that responds to user input
+- Components that manage their own data
+- Complex UI with multiple state values
 
 ---
 
-## Handling Events
+## Composing Components
 
-Attach event handlers using the `events` prop. You can use any standard DOM event name (e.g., `click`, `input`, `change`).
-
-```typescript
-import { button, DockitElementRoot } from 'dockit-element';
-
-const btn = button(["Click me!"], {
-  events: { click: () => alert("Button clicked!") }
-});
-
-const root = new DockitElementRoot(document.getElementById('app')!, btn);
-root.render();
-```
-
-**Tip:** For stateful components, use class methods or arrow functions to ensure `this` is correct.
-
----
-
-## Styling: Scoped, Dynamic, and Responsive
-
-Dockit Element supports scoped styles as objects, including pseudo-selectors, media queries, and even keyframe animations.
+Build complex UIs by combining simple components:
 
 ```typescript
-import { div, DockitElementRoot } from 'dockit-element';
+import { Component, div, h1, p, button } from 'dockit-element';
 
-const myStyle = {
-  default: { color: 'purple', padding: '1rem', borderRadius: '8px' },
-  pseudo: { ':hover': { color: 'orange', background: '#f0f0f0' } },
-  media: { '(max-width: 600px)': { fontSize: '0.8rem' } }
-};
-
-const styledDiv = div(["Styled text!"], { style: myStyle });
-const root = new DockitElementRoot(document.getElementById('app')!, styledDiv);
-root.render();
-```
-
-**Advanced:** You can also use the `animation` property for keyframes and transitions. See the source for details.
-
----
-
-## Composing and Reusing Components
-
-Compose your UI from small, reusable components. You can nest stateless and stateful components freely.
-
-```typescript
-function Card({ title, content }: { title: string, content: string }) {
+// Simple function component
+function Card({ title, content }: { title: string; content: string }) {
   return div([
     h1([title]),
     p([content])
-  ], { style: { default: { border: '1px solid #ccc', padding: '1rem', borderRadius: '8px' } } });
+  ], {
+    style: {
+      default: {
+        border: '1px solid #ddd',
+        padding: '1rem',
+        margin: '0.5rem',
+        borderRadius: '4px'
+      }
+    }
+  });
 }
 
-const cards = div([
-  Card({ title: "Card 1", content: "This is the first card." }),
-  Card({ title: "Card 2", content: "This is the second card." })
-]);
-const root = new DockitElementRoot(document.getElementById('app')!, cards);
-root.render();
-```
-
----
-
-## State, Reactivity, and the Virtual DOM
-
-Dockit Element uses a virtual DOM and a granular diffing algorithm for efficient updates. When you call `setState` in a `Component`, Dockit:
-- Updates the component’s state
-- Calls `renderView()` to update the virtual DOM tree
-- Diffs the new tree against the old one and updates only what’s changed in the real DOM
-
-**Example:**
-```typescript
-class Toggle extends Component<{ on: boolean }> {
+// Stateful component using simple components
+class CardList extends Component<{ cards: Array<{ title: string; content: string }> }> {
   constructor() {
-    super({ on: false });
+    super({
+      cards: [
+        { title: "Card 1", content: "First card content" },
+        { title: "Card 2", content: "Second card content" }
+      ]
+    });
     this.updateView();
   }
+
+  addCard = () => {
+    const newCard = {
+      title: `Card ${this.state.cards.length + 1}`,
+      content: `Card ${this.state.cards.length + 1} content`
+    };
+    this.setState({
+      cards: [...this.state.cards, newCard]
+    });
+  };
+
   renderView() {
     this.children = [
-      button([
-        this.state.on ? "ON" : "OFF"
-      ], {
-        events: { click: () => this.setState({ on: !this.state.on }) }
-      })
+      button(["Add Card"], {
+        events: { click: this.addCard }
+      }),
+      div(
+        this.state.cards.map(card => Card(card))
+      )
     ];
   }
 }
-const root = new DockitElementRoot(document.getElementById('app')!, new Toggle());
-root.render();
 ```
 
-**Performance:** Dockit is fast for small/medium apps and widgets. For very large trees, consider batching updates or using keys for list items.
+**Composition patterns:**
+- Use function components for presentational pieces
+- Use class components for interactive containers
+- Pass data down through props
+- Keep components focused on a single responsibility
 
 ---
 
-## Animations: Keyframes, Transitions, and State
+## How Reactivity Works
 
-Dockit Element supports advanced CSS animations and transitions directly in the `style` prop. You can define keyframes, trigger animations from state, and combine with pseudo-selectors for interactive effects.
+Dockit uses a virtual DOM to efficiently update your UI. Here's what happens:
 
-### Defining Keyframes and Animations
-
+**1. You create elements:**
 ```typescript
-const animatedStyle = {
-  default: {
-    width: '200px',
-    height: '100px',
-    background: '#4e54c8',
-    color: '#fff',
-    borderRadius: '8px',
-    textAlign: 'center',
-    lineHeight: '100px',
-    animationName: 'fadeIn',
-    animationDuration: '1s',
-    animationFillMode: 'forwards',
-  },
-  animation: {
-    keyframes: {
-      fadeIn: {
-        '0%': { opacity: '0', transform: 'scale(0.8)' },
-        '100%': { opacity: '1', transform: 'scale(1)' }
-      }
-    },
-    options: {
-      name: 'fadeIn',
-      duration: 1000,
-      fillMode: 'forwards',
-      easing: 'ease-out',
-    }
-  }
-};
+const myElement = div(["Hello"]);
+```
+This creates a virtual representation of the UI in memory.
 
-const animatedDiv = div(["Animated!"], { style: animatedStyle });
+**2. Dockit renders to the real DOM:**
+```typescript
+root.render();
+```
+Dockit converts the virtual elements into actual DOM elements.
+
+**3. When state changes:**
+```typescript
+this.setState({ count: this.state.count + 1 });
 ```
 
-### Animating on State Change
+Dockit:
+- Updates the component's state
+- Calls `renderView()` to create a new virtual tree
+- Compares the new tree with the old one (diffing)
+- Updates only the parts of the real DOM that changed
 
-You can trigger animations by changing the style or class in response to state. For example, a fade-in/fade-out toggle:
+**Why this matters:**
+- Updates are fast (only changed parts are updated)
+- You don't need to manually manipulate the DOM
+- Your code stays simple and declarative
 
+**Performance tip:** For large lists, use the `key` prop to help Dockit track items:
+```typescript
+div(
+  items.map(item => 
+    div([item.name], { key: item.id })
+  )
+)
+```
+
+---
+
+## Animations and Transitions
+
+Add visual polish with CSS animations and transitions:
+
+**Simple transitions:**
+```typescript
+const fadeIn = div(["I fade in!"], {
+  style: {
+    default: {
+      animation: 'fadeIn 1s ease-in',
+      padding: '1rem',
+      backgroundColor: '#4e54c8',
+      color: 'white'
+    },
+    animation: {
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0', transform: 'translateY(-20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' }
+        }
+      },
+      options: {
+        name: 'fadeIn',
+        duration: 1000,
+        easing: 'ease-in'
+      }
+    }
+  }
+});
+```
+
+**Hover transitions:**
+```typescript
+const hoverButton = button(["Hover me"], {
+  style: {
+    default: {
+      padding: '10px 20px',
+      backgroundColor: '#4e54c8',
+      color: 'white',
+      border: 'none',
+      borderRadius: '4px',
+      transition: 'all 0.3s ease',
+      cursor: 'pointer'
+    },
+    pseudo: {
+      ':hover': {
+        backgroundColor: '#8f94fb',
+        transform: 'translateY(-2px)',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+      }
+    }
+  }
+});
+```
+
+**State-based animations:**
 ```typescript
 class FadeToggle extends Component<{ visible: boolean }> {
   constructor() {
     super({ visible: true });
     this.updateView();
   }
-  toggle = () => this.setState({ visible: !this.state.visible });
+
+  toggle = () => {
+    this.setState({ visible: !this.state.visible });
+  };
+
   renderView() {
+    const fadeStyle = {
+      default: {
+        animation: this.state.visible ? 'fadeIn 0.5s' : 'fadeOut 0.5s',
+        animationFillMode: 'forwards'
+      },
+      animation: {
+        keyframes: {
+          fadeIn: {
+            '0%': { opacity: '0' },
+            '100%': { opacity: '1' }
+          },
+          fadeOut: {
+            '0%': { opacity: '1' },
+            '100%': { opacity: '0' }
+          }
+        }
+      }
+    };
+
     this.children = [
-      button([this.state.visible ? "Hide" : "Show"], { events: { click: this.toggle } }),
-      this.state.visible ? div(["I fade in!"], { style: animatedStyle }) : null
+      button([this.state.visible ? "Hide" : "Show"], {
+        events: { click: this.toggle }
+      }),
+      this.state.visible ? div(["Hello!"], { style: fadeStyle }) : null
     ];
   }
 }
 ```
 
-**Tip:** You can use different animation names or style objects based on state for more complex effects (e.g., slide, bounce, etc.).
-
-### Combining with Pseudo-Selectors
-
-Dockit lets you combine animations with pseudo-selectors for hover/focus effects:
-
-```typescript
-const hoverAnimStyle = {
-  default: { transition: 'background 0.3s' },
-  pseudo: { ':hover': { background: '#ffb347' } }
-};
-```
-
 ---
 
-## Advanced Stateful Patterns: Custom Methods & Lifecycle
+## Advanced Patterns
 
-Stateful components can have custom methods for encapsulating logic, updating state, and triggering DOM updates. This is especially useful for complex UI (forms, timers, modals, etc.).
+### Custom Methods and Lifecycle
 
-### Custom Methods Example: Timer
+Add custom methods to encapsulate complex logic:
 
 ```typescript
-class Timer extends Component<{ seconds: number, running: boolean }> {
-  interval: any;
+class Timer extends Component<{ seconds: number; running: boolean }> {
+  private interval?: number;
+
   constructor() {
     super({ seconds: 0, running: false });
     this.updateView();
   }
+
   start = () => {
     if (!this.state.running) {
       this.setState({ running: true });
-      this.interval = setInterval(() => {
+      this.interval = window.setInterval(() => {
         this.setState({ seconds: this.state.seconds + 1 });
       }, 1000);
     }
   };
+
   stop = () => {
     if (this.state.running) {
       clearInterval(this.interval);
       this.setState({ running: false });
     }
   };
+
   reset = () => {
+    this.stop();
     this.setState({ seconds: 0 });
   };
-  // Clean up interval if unmounted (pattern)
+
+  // Cleanup when component is removed
   destroy = () => {
-    clearInterval(this.interval);
+    this.stop();
   };
+
   renderView() {
     this.children = [
-      h1([`Timer: ${this.state.seconds}s`]),
-      button([this.state.running ? "Stop" : "Start"], { events: { click: this.state.running ? this.stop : this.start } }),
-      button(["Reset"], { events: { click: this.reset } })
+      h1([`Time: ${this.state.seconds}s`]),
+      button([this.state.running ? "Stop" : "Start"], {
+        events: {
+          click: this.state.running ? this.stop : this.start
+        }
+      }),
+      button(["Reset"], {
+        events: { click: this.reset }
+      })
     ];
   }
 }
 ```
 
-**Lifecycle Pattern:**
-- Use custom methods for effects and cleanup (e.g., `destroy` for timers, listeners, etc.).
-- You can call these from outside the component if you keep a reference.
+### Props and Children Pattern
 
-### Best Practices for Stateful Components
-- Always use `this.setState()` to update state and trigger reactivity.
-- Use arrow functions for event handlers and custom methods to preserve `this` context.
-- Encapsulate logic in methods for clarity and reuse.
-- For side effects (timers, subscriptions), clean up in a custom `destroy` method or similar pattern.
+Pass dynamic content to components:
+
+```typescript
+function Container({ title, children }: { title: string; children: any[] }) {
+  return div([
+    h1([title]),
+    div(children, {
+      style: {
+        default: { padding: '1rem' }
+      }
+    })
+  ], {
+    style: {
+      default: {
+        border: '2px solid #ccc',
+        borderRadius: '8px',
+        margin: '1rem'
+      }
+    }
+  });
+}
+
+// Use it:
+const myContainer = Container({
+  title: "My Section",
+  children: [
+    p(["This is some content."]),
+    button(["Click me!"])
+  ]
+});
+```
+
+### Best Practices
+
+**Do:**
+- Always use `this.setState()` to update state
+- Use arrow functions for event handlers to preserve `this`
+- Keep components small and focused
+- Extract reusable UI into function components
+- Clean up timers and subscriptions in a `destroy` method
+
+**Don't:**
+- Mutate `this.state` directly
+- Forget to call `this.updateView()` in the constructor
+- Create deeply nested component trees (split into smaller components)
+- Mix global CSS with scoped styles (stick to one approach)
 
 ---
 
-## Testing Dockit Components
+## Testing Your Components
 
-You can test Dockit components using any DOM testing library (e.g., Jest + jsdom). Here’s a simple example:
+Test Dockit components using any DOM testing library (e.g., Jest with jsdom):
 
 ```typescript
 import { Counter } from './Counter';
 
-test('Counter increments', () => {
-  const counter = new Counter(0);
-  const el = counter.render();
-  expect(el.textContent).toContain('Count: 0');
-  // Simulate click
-  el.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-  expect(el.textContent).toContain('Count: 1');
+describe('Counter', () => {
+  test('starts at initial value', () => {
+    const counter = new Counter(5);
+    const el = counter.render();
+    expect(el.textContent).toContain('5');
+  });
+
+  test('increments when button clicked', () => {
+    const counter = new Counter(0);
+    const el = counter.render();
+    
+    const button = el.querySelector('button')!;
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    
+    expect(el.textContent).toContain('1');
+  });
+
+  test('resets to zero', () => {
+    const counter = new Counter(10);
+    const el = counter.render();
+    
+    const resetButton = el.querySelectorAll('button')[1];
+    resetButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    
+    expect(el.textContent).toContain('0');
+  });
 });
 ```
 
-**Tips:**
-- Always use `.dispatchEvent` for simulating events in tests.
-- You can test stateless and stateful components the same way.
+**Testing tips:**
+- Use `.dispatchEvent()` to simulate user interactions
+- Query the rendered element with standard DOM methods
+- Test both function and class components the same way
+- Focus on user-visible behavior, not implementation details
 
 ---
 
-## Integrating Dockit as a Library
+## Publishing as a Library
 
-Before publishing or using Dockit as a library, **remove or comment out any demo code** in `src/index.ts` that mounts components to the DOM. This ensures Dockit can be imported cleanly into other projects:
+To use Dockit components as a library in other projects:
 
+**1. Clean up your entry point:**
+
+Remove any demo code from `src/index.ts`:
 ```typescript
 // Remove or comment out:
 // const container = document.getElementById("app")!;
-// const root = new DockitElementRoot(container, LandingPage());
+// const root = new DockitElementRoot(container, MyApp());
 // root.render();
 ```
 
-Then, export your components and helpers:
+**2. Export your components:**
 ```typescript
-export { Component, Element, DockitElementRoot, div, h1, ... };
+// src/index.ts
+export { Component, Element, DockitElementRoot };
+export { div, span, h1, h2, p, button, input /* ... all elements */ };
+export { MyCustomComponent } from './components/MyCustomComponent';
 ```
 
-**Bundling:** Use your favorite bundler (esbuild, Rollup, etc.) to package your library for npm.
+**3. Configure package.json:**
+```json
+{
+  "name": "my-dockit-library",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  }
+}
+```
 
----
+**4. Build and publish:**
+```sh
+npm run build
+npm publish
+```
 
-## Advanced Topics
-
-### Virtual DOM & Diffing
-Dockit’s virtual DOM is optimized for minimal updates. Use `key` props for list items to help Dockit track elements efficiently.
-
-### Animations
-You can define keyframe animations in the `style` prop using the `animation` property. See the source for advanced usage.
-
-### Integration with Other Tools
-Dockit works with any bundler or build tool. You can use it alongside other libraries, or even embed Dockit widgets in non-Dockit apps.
+**Using your library:**
+```typescript
+import { Component, div, button } from 'my-dockit-library';
+import { MyCustomComponent } from 'my-dockit-library';
+```
 
 ---
 
 ## Troubleshooting & FAQ
 
-**Q: My component doesn’t update when I change state!**
-- Use `this.setState()` instead of mutating `this.state` directly.
-- Always call `this.updateView()` in your constructor after initializing fields.
-- Ensure you are mounting with `DockitElementRoot`.
+### My component doesn't update!
 
-**Q: How do I use Dockit Element in a larger app?**
-- Compose your app from components, and mount your root component to the DOM as shown above.
-- Use a `components/` directory for organization.
+**Problem:** State changes but UI doesn't update.
 
-**Q: Can I use Dockit Element with frameworks like React or Vue?**
-- Dockit Element is a standalone library, but you can use it alongside other frameworks if needed.
+**Solutions:**
+- ✅ Use `this.setState()` instead of directly modifying `this.state`
+- ✅ Make sure you called `this.updateView()` at the end of the constructor
+- ✅ Verify you're using `DockitElementRoot` to mount your app
 
-**Q: How do I debug my Dockit components?**
-- Use `console.log` in your `renderView` and event handlers.
-- Inspect the DOM to verify updates.
-- Use browser devtools to step through your code.
+### Styles aren't applying
 
-**Q: Why aren’t my styles applying?**
-- Make sure you’re using the `style` prop, not a global CSS file.
-- Check that your DockitElementRoot is rendering after the DOM is loaded.
+**Problem:** My styles don't appear in the browser.
 
-**Q: How do I handle lists and keys?**
-- Use the `key` prop on elements in lists to help Dockit track them efficiently.
+**Solutions:**
+- ✅ Use the `style` prop on elements, not external CSS files
+- ✅ Ensure `DockitElementRoot` has rendered (styles are injected during render)
+- ✅ Check browser DevTools to verify the styles are in the `<style>` tag
+- ✅ Make sure you're using the `default` property in the style object
+
+### Event handlers aren't working
+
+**Problem:** Click events or other events don't fire.
+
+**Solutions:**
+- ✅ Use arrow functions: `{ click: () => this.handleClick() }` not `{ click: this.handleClick }`
+- ✅ Verify the event name is correct (`click`, not `onClick`)
+- ✅ Check that the element has been rendered to the DOM
+- ✅ Make sure the event handler is in the `events` prop
+
+### TypeScript errors
+
+**Problem:** TypeScript complains about types.
+
+**Solutions:**
+- ✅ Use `document.getElementById('app')!` (with `!`) to assert the element exists
+- ✅ Define your state type: `class MyComponent extends Component<{ count: number }>`
+- ✅ Ensure your `tsconfig.json` has `"strict": true`
+
+### How do I handle forms?
+
+```typescript
+class LoginForm extends Component<{ username: string; password: string }> {
+  constructor() {
+    super({ username: '', password: '' });
+    this.updateView();
+  }
+
+  handleSubmit = (e: Event) => {
+    e.preventDefault();
+    console.log('Login:', this.state);
+  };
+
+  renderView() {
+    this.children = [
+      form([
+        input([], {
+          type: 'text',
+          placeholder: 'Username',
+          events: {
+            input: (e) => this.setState({ username: (e.target as HTMLInputElement).value })
+          }
+        }),
+        input([], {
+          type: 'password',
+          placeholder: 'Password',
+          events: {
+            input: (e) => this.setState({ password: (e.target as HTMLInputElement).value })
+          }
+        }),
+        button(['Login'], { type: 'submit' })
+      ], {
+        events: { submit: this.handleSubmit }
+      })
+    ];
+  }
+}
+```
+
+### Can I use Dockit with other frameworks?
+
+Yes! Dockit is standalone and can coexist with other libraries. You can:
+- Embed Dockit widgets in React/Vue apps
+- Use Dockit alongside jQuery
+- Mount multiple independent Dockit apps on the same page
+
+Just make sure each `DockitElementRoot` has its own container element.
+
+### How do I debug?
+
+- Use `console.log` in your `renderView()` and event handlers
+- Inspect the DOM with browser DevTools
+- Add breakpoints in your code
+- Check the `<style>` tag to see generated CSS
+- Use React DevTools or similar browser extensions won't work (Dockit is not React)
 
 ---
 
-## Contributing & Extending
+## Contributing
 
-- Fork the repo and submit pull requests for bug fixes or new features.
-- Open issues for questions, suggestions, or bugs.
-- You can extend Dockit by adding new element helpers, utilities, or improving the virtual DOM diffing.
-- Dockit’s philosophy: minimal, explicit, and easy to understand. Contributions should keep this spirit.
+We welcome contributions!
+
+**How to contribute:**
+1. Fork the repository
+2. Create a feature branch: `git checkout -b my-feature`
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+**What to contribute:**
+- Bug fixes
+- New element helpers
+- Documentation improvements
+- Performance optimizations
+- Example projects
+
+**Guidelines:**
+- Keep it simple and explicit (Dockit's philosophy)
+- Add tests for new features
+- Update documentation
+- Follow existing code style
+
+**Questions or ideas?**
+- Open an issue on GitHub
+- Start a discussion
 
 ---
 
 ## License
 
-MIT
+MIT License
+
+Copyright (c) 2024 Dockit Element
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
