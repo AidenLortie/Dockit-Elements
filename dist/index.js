@@ -10,6 +10,7 @@ const StyleRegistry = new Map(); // Maps styleHash -> className
 const injectedClassNames = new Set(); // Track injected class names
 const pendingStyles = new Map(); // Queue styles for batch injection
 let globalCounter = 0; // Global counter for unique identifiers
+const CLASS_PREFIX = 'dockit-'; // Constant for class name prefix
 const elementMetadata = new WeakMap();
 const toKebabCase = (str) => str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
 // Normalize style keys → kebab-case and sort them for stable hashing
@@ -64,7 +65,7 @@ const registerOrGetClassName = (style) => {
     const styleString = JSON.stringify(normalizedStyle);
     const styleHash = hashString(styleString);
     // Always use a unique class name based on style hash
-    const className = `dockit-${styleHash}`;
+    const className = `${CLASS_PREFIX}${styleHash}`;
     if (!StyleRegistry.has(className)) {
         StyleRegistry.set(className, styleString);
         // Queue the style for batch injection
@@ -200,9 +201,11 @@ export class DockitElementRoot {
             // Animations with namespacing
             if (styleObj.animation) {
                 const { keyframes, options } = styleObj.animation;
+                // Extract hash from className (remove prefix)
+                const classHash = className.startsWith(CLASS_PREFIX) ? className.substring(CLASS_PREFIX.length) : className;
                 // Insert keyframes with namespaced names
                 for (const [keyframeName, keyframeStyles] of Object.entries(keyframes)) {
-                    const namespacedName = `dockit-${className.replace('dockit-', '')}-${keyframeName}`;
+                    const namespacedName = `${CLASS_PREFIX}${classHash}-${keyframeName}`;
                     let keyframeRule = `@keyframes ${namespacedName} {`;
                     for (const [percent, styles] of Object.entries(keyframeStyles)) {
                         keyframeRule += `${percent} {`;
@@ -217,9 +220,9 @@ export class DockitElementRoot {
                 // Animation options with namespaced keyframe names
                 const names = options.name
                     ? (Array.isArray(options.name)
-                        ? options.name.map(n => `dockit-${className.replace('dockit-', '')}-${n}`).join(", ")
-                        : `dockit-${className.replace('dockit-', '')}-${options.name}`)
-                    : Object.keys(keyframes).map(n => `dockit-${className.replace('dockit-', '')}-${n}`).join(", ");
+                        ? options.name.map(n => `${CLASS_PREFIX}${classHash}-${n}`).join(", ")
+                        : `${CLASS_PREFIX}${classHash}-${options.name}`)
+                    : Object.keys(keyframes).map(n => `${CLASS_PREFIX}${classHash}-${n}`).join(", ");
                 let animationRule = `.${className} { animation-name: ${names};`;
                 if (options.duration)
                     animationRule += ` animation-duration: ${options.duration}ms;`;
@@ -276,7 +279,7 @@ export class Element {
             meta.generatedId = this.props.id;
         }
         else {
-            const generatedId = `dockit-${globalCounter++}`;
+            const generatedId = `${CLASS_PREFIX}${globalCounter++}`;
             meta.generatedId = generatedId;
             this.props.id = generatedId;
         }
@@ -335,7 +338,14 @@ export class Element {
             return;
         }
         const el = this._el; // TypeScript: el is HTMLElement
-        const meta = elementMetadata.get(this);
+        let meta = elementMetadata.get(this);
+        // Ensure metadata exists (defensive programming)
+        if (!meta) {
+            meta = {
+                eventHandlersMap: new Map(),
+            };
+            elementMetadata.set(this, meta);
+        }
         // Update props if they have changed using targeted comparison
         if (propsChanged(this.props, meta.lastProps, this)) {
             // Update id and className if changed
@@ -362,7 +372,7 @@ export class Element {
                 // Remove any old Dockit-generated classes
                 const toRemove = [];
                 el.classList.forEach(cls => {
-                    if (cls.startsWith('dockit-'))
+                    if (cls.startsWith(CLASS_PREFIX))
                         toRemove.push(cls);
                 });
                 toRemove.forEach(cls => el.classList.remove(cls));
@@ -418,9 +428,9 @@ export class Element {
                 if (typeof newChild === 'string' && typeof oldChild === 'string') {
                     if (newChild !== oldChild) {
                         // Mutate text node instead of replacing
-                        const textNode = parent.childNodes[domIdx];
-                        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-                            textNode.textContent = newChild;
+                        const node = parent.childNodes[domIdx];
+                        if (node && node.nodeType === Node.TEXT_NODE) {
+                            node.textContent = newChild;
                         }
                         else {
                             parent.replaceChild(document.createTextNode(newChild), parent.childNodes[domIdx]);
