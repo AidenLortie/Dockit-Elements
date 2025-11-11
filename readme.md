@@ -932,7 +932,7 @@ Just make sure each `DockitElementRoot` has its own container element.
 We welcome contributions!
 
 **How to contribute:**
-1. Fork the repository
+1. Fork [the repository](https://github.com/AidenLortie/Dockit-Elements)
 2. Create a feature branch: `git checkout -b my-feature`
 3. Make your changes
 4. Submit a pull request

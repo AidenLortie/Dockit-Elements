@@ -1,10 +1,10 @@
 import type { DockitProps } from './types';
 import { CLASS_PREFIX } from './constants';
-import { 
-    getNextId, 
-    elementMetadata, 
-    reservedPropKeys, 
-    propsChanged 
+import {
+    getNextId,
+    elementMetadata,
+    reservedPropKeys,
+    propsChanged
 } from './element-utils';
 import { registerOrGetClassName, injectStyles } from './style-registry';
 
@@ -19,27 +19,20 @@ export class Element {
         this.tagName = tagName;
         this.props = props;
         this.children = children;
-        
+
         // Initialize metadata in WeakMap
         elementMetadata.set(this, {
-            eventHandlersMap: new Map(),
+            eventHandlersMap: new Map()
         });
-        
-        this.onLoad();
-    }
 
-    onLoad() {
-        if (!this.props.events) this.props.events = {};
-        if (!this.props.events.load) this.props.events.load = () => {
-        };
-        this.props.events.load();
-        return this;
+        if (this.props.events?.load )
+            this.props.events.load();
     }
 
     render(): HTMLElement {
         const el = document.createElement(this.tagName);
         const meta = elementMetadata.get(this)!;
-        
+
         // set id and className if provided
         if (this.props.id) {
             el.id = this.props.id;
@@ -49,7 +42,7 @@ export class Element {
             meta.generatedId = generatedId;
             this.props.id = generatedId;
         }
-        
+
         if (this.props.className) el.className = this.props.className;
 
         // Set attributes and properties
@@ -73,6 +66,7 @@ export class Element {
         if (this.props.events) {
             for (const [event, handler] of Object.entries(this.props.events)) {
                 // Create a wrapper function that we can later remove
+                if (event === 'load') continue; // skip load event here
                 const wrapper = (e: Event) => handler(e);
                 meta.eventHandlersMap.set(event, wrapper);
                 el.addEventListener(event, wrapper);
@@ -87,9 +81,9 @@ export class Element {
                 el.appendChild(child.render());
             }
         }
-        
+
         this._el = el; // cache the rendered element
-        
+
         // Store lastProps and lastChildren in metadata
         meta.lastProps = {...this.props};
         meta.lastChildren = [...this.children];
@@ -108,10 +102,10 @@ export class Element {
         if (!(this._el instanceof HTMLElement)) {
             return;
         }
-        
+
         const el = this._el; // TypeScript: el is HTMLElement
         let meta = elementMetadata.get(this);
-        
+
         // Ensure metadata exists (defensive programming)
         if (!meta) {
             meta = {
@@ -119,7 +113,7 @@ export class Element {
             };
             elementMetadata.set(this, meta);
         }
-        
+
         // Update props if they have changed using targeted comparison
         if (propsChanged(this.props, meta.lastProps, this)) {
             // Update id and className if changed
@@ -129,7 +123,7 @@ export class Element {
             if (this.props.className && this.props.className !== meta.lastProps?.className) {
                 el.className = this.props.className;
             }
-            
+
             // Update attributes and properties
             for (const [key, value] of Object.entries(this.props)) {
                 if (reservedPropKeys.has(key)) continue; // Skip reserved keys
@@ -140,7 +134,7 @@ export class Element {
                     el.setAttribute(key, value);
                 }
             }
-            
+
             // Handle styles
             if (this.props.style) {
                 // Remove any old Dockit-generated classes
@@ -153,59 +147,61 @@ export class Element {
                 const className = registerOrGetClassName(this.props.style);
                 el.classList.add(className);
             }
-            
+
             // Handle events with proper removal using stored wrappers
             const oldEvents = meta.lastProps?.events || {};
             const newEvents = this.props.events || {};
-            
+
             // Remove old event listeners
             for (const [event, _handler] of Object.entries(oldEvents)) {
+                if (event === 'load') continue; // skip load event here
                 const wrapper = meta.eventHandlersMap.get(event);
                 if (wrapper) {
                     el.removeEventListener(event, wrapper);
                     meta.eventHandlersMap.delete(event);
                 }
             }
-            
+
             // Add new event listeners with wrappers
             for (const [event, handler] of Object.entries(newEvents)) {
+                if (event === 'load') continue; // skip load event here
                 const wrapper = (e: Event) => handler(e);
                 meta.eventHandlersMap.set(event, wrapper);
                 el.addEventListener(event, wrapper);
             }
-            
+
             meta.lastProps = {...this.props}; // Update lastProps in metadata
             injectStyles();
         }
-        
+
         // --- Improved children diffing ---
         const parent = el;
         const oldChildren = meta.lastChildren || [];
         const newChildren = this.children;
-        
+
         // Build a map of old keyed children for O(1) lookups
-        const getKey = (child: any, idx: number) => 
+        const getKey = (child: any, idx: number) =>
             (typeof child === 'object' && child?.props?.key != null) ? child.props.key : idx;
-        
+
         const oldKeyedMap = new Map<any, { child: Element | string, index: number }>();
         for (let i = 0; i < oldChildren.length; i++) {
             const key = getKey(oldChildren[i], i);
             oldKeyedMap.set(key, { child: oldChildren[i], index: i });
         }
-        
+
         let domIdx = 0;
         for (let i = 0; i < newChildren.length; i++) {
             const newChild = newChildren[i];
             const key = getKey(newChild, i);
             const oldMatch = oldKeyedMap.get(key);
-            
+
             // Reference equality: if same instance, always update in place
             if (oldMatch && newChild === oldMatch.child) {
                 if (typeof newChild !== 'string' && newChild) newChild.update();
                 domIdx++;
                 continue;
             }
-            
+
             if (oldMatch) {
                 const oldChild = oldMatch.child;
                 if (typeof newChild === 'string' && typeof oldChild === 'string') {
@@ -249,12 +245,12 @@ export class Element {
                 domIdx++;
             }
         }
-        
+
         // Remove any extra old children
         while (parent.childNodes.length > newChildren.length) {
             parent.removeChild(parent.lastChild!);
         }
-        
+
         meta.lastChildren = [...this.children]; // Store references in metadata
         injectStyles(); // Final catch-all to ensure all styles are injected
     }

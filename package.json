@@ -1,15 +1,30 @@
 {
   "name": "dockit-elements",
-  "version": "1.0.0",
+  "version": "0.1.2",
   "description": "",
   "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "scripts": {
-    "build": "tsc"
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "prepack": "npm run build",
+    "test": "vitest"
   },
-  "dependencies": {},
   "devDependencies": {
-    "typescript": "^5.5.3"
+    "@vitest/coverage-v8": "^4.0.5",
+    "happy-dom": "^20.0.10",
+    "typescript": "^5.5.3",
+    "vitest": "^4.0.5"
   },
-  "private": true
+    "private": false,
+    "keywords": [
+        "hobby project",
+        "components",
+        "dockit",
+        "web components",
+        "design system",
+        "ui framework",
+        "library",
+        "elements"
+    ]
 }
