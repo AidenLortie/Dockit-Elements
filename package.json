@@ -6,12 +6,24 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "watch": "tsc --watch",
     "prepublishOnly": "npm run build",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "test": "vitest"
   },
-  "dependencies": {},
   "devDependencies": {
-    "typescript": "^5.5.3"
-  }
+    "@vitest/coverage-v8": "^4.0.5",
+    "happy-dom": "^20.0.10",
+    "typescript": "^5.5.3",
+    "vitest": "^4.0.5"
+  },
+    "keywords": [
+        "hobby project",
+        "components",
+        "dockit",
+        "web components",
+        "design system",
+        "ui framework",
+        "library",
+        "elements"
+    ]
 }
