@@ -16,7 +16,6 @@
     "typescript": "^5.5.3",
     "vitest": "^4.0.5"
   },
-    "private": false,
     "keywords": [
         "hobby project",
         "components",
