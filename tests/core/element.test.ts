@@ -35,7 +35,7 @@ describe ('Element Tests', () => {
 
     it('Element load event gets called', () => {
         const mockLoad = vi.fn();
-        const element = div([], { events: { load: mockLoad} });
+        div([], { events: { load: mockLoad} });
         expect(mockLoad).toHaveBeenCalled();
     });
 
