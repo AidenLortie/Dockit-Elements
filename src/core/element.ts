@@ -25,8 +25,9 @@ export class Element {
             eventHandlersMap: new Map()
         });
 
-        if (this.props.events?.load )
+        if (this.props.events?.load ) {
             this.props.events.load();
+        }
     }
 
     render(): HTMLElement {
